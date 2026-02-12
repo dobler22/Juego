@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego - Personaje Caminando</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Área de juego */
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Personaje */
+        .personaje {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: none;
+            image-rendering: pixelated;
+        }
+
+        .personaje img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        /* Clase para voltear horizontalmente */
+        .flip-horizontal {
+            transform: translate(-50%, -50%) scaleX(-1);
+        }
+
+        /* HUD - Controles en pantalla */
+        .hud {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .controls-info {
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+        }
+
+        .control-up { grid-column: 2; grid-row: 1; }
+        .control-left { grid-column: 1; grid-row: 2; }
+        .control-down { grid-column: 2; grid-row: 3; }
+        .control-right { grid-column: 3; grid-row: 2; }
+
+        /* Indicador de dirección */
+        .direction-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .estado {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        /* Botón de regreso */
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f857a6 0%, #ff5858 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(248, 87, 166, 0.3);
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(248, 87, 166, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hud {
+                bottom: 10px;
+                padding: 15px;
+            }
+
+            .controls-grid {
+                grid-template-columns: repeat(3, 50px);
+                grid-template-rows: repeat(3, 50px);
+            }
+
+            .control-btn {
+                font-size: 20px;
+            }
+
+            .direction-indicator {
+                font-size: 12px;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Personaje -->
+        <div class="personaje" id="personaje">
+            <img src="assets/personaje/personaje.png" alt="Personaje" id="personajeImg">
+        </div>
+
+        <!-- Indicador de dirección -->
+        <div class="direction-indicator" id="directionIndicator">
+            Estado: <span class="estado">Quieto</span><br>
+            Dirección: Ninguna<br>
+            Posición: (0, 0)
+        </div>
+
+        <!-- Botón de regreso -->
+        <button class="back-btn" onclick="volverInicio()">← Volver al Inicio</button>
+
+        <!-- HUD con controles -->
+        <div class="hud">
+            <div class="controls-info">
+                Usa las flechas del teclado o los botones
+            </div>
+            <div class="controls-grid">
+                <button class="control-btn control-up" data-direction="up">↑</button>
+                <button class="control-btn control-left" data-direction="left">←</button>
+                <button class="control-btn control-down" data-direction="down">↓</button>
+                <button class="control-btn control-right" data-direction="right">→</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables del personaje
+        const personaje = document.getElementById('personaje');
+        const personajeImg = document.getElementById('personajeImg');
+        const directionIndicator = document.getElementById('directionIndicator');
+        
+        // Rutas de las imágenes
+        const IMG_QUIETO = 'assets/personaje/personaje.png';
+        const IMG_CAMINANDO = 'assets/personaje/caminando.gif';
+        
+        let posX = window.innerWidth / 2;
+        let posY = window.innerHeight / 2;
+        let velocidad = 5;
+        let direccionActual = 'derecha'; // Por defecto mirando a la derecha
+        let estaMoviendose = false;
+
+        // Teclas presionadas
+        const teclasPresionadas = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            w: false,
+            s: false,
+            a: false,
+            d: false
+        };
+
+        // Función para cambiar la imagen según el estado
+        function cambiarImagen(moviendose) {
+            if (moviendose && !estaMoviendose) {
+                // Cambiar a animación de caminar
+                personajeImg.src = IMG_CAMINANDO;
+                estaMoviendose = true;
+            } else if (!moviendose && estaMoviendose) {
+                // Cambiar a imagen estática
+                personajeImg.src = IMG_QUIETO;
+                estaMoviendose = false;
+            }
+        }
+
+        // Función para actualizar la dirección visual del personaje
+        function actualizarDireccion(nuevaDireccion) {
+            if (nuevaDireccion === 'izquierda') {
+                personaje.classList.add('flip-horizontal');
+                direccionActual = 'izquierda';
+            } else if (nuevaDireccion === 'derecha') {
+                personaje.classList.remove('flip-horizontal');
+                direccionActual = 'derecha';
+            }
+        }
+
+        // Función para mover el personaje
+        function moverPersonaje() {
+            let nuevoX = posX;
+            let nuevoY = posY;
+            let hayMovimiento = false;
+            let direccionTexto = [];
+
+            // Movimiento vertical
+            if (teclasPresionadas.ArrowUp || teclasPresionadas.w) {
+                nuevoY -= velocidad;
+                hayMovimiento = true;
+                direccionTexto.push('Arriba');
+            }
+            if (teclasPresionadas.ArrowDown || teclasPresionadas.s) {
+                nuevoY += velocidad;
+                hayMovimiento = true;
+                direccionTexto.push('Abajo');
+            }
+
+            // Movimiento horizontal (actualiza la dirección visual)
+            if (teclasPresionadas.ArrowLeft || teclasPresionadas.a) {
+                nuevoX -= velocidad;
+                hayMovimiento = true;
+                direccionTexto.push('Izquierda');
+                actualizarDireccion('izquierda');
+            }
+            if (teclasPresionadas.ArrowRight || teclasPresionadas.d) {
+                nuevoX += velocidad;
+                hayMovimiento = true;
+                direccionTexto.push('Derecha');
+                actualizarDireccion('derecha');
+            }
+
+            // Límites de la pantalla
+            const margen = 32; // Mitad del tamaño del personaje
+            nuevoX = Math.max(margen, Math.min(window.innerWidth - margen, nuevoX));
+            nuevoY = Math.max(margen, Math.min(window.innerHeight - margen, nuevoY));
+
+            // Actualizar posición
+            posX = nuevoX;
+            posY = nuevoY;
+            personaje.style.left = posX + 'px';
+            personaje.style.top = posY + 'px';
+
+            // Cambiar imagen según el movimiento
+            cambiarImagen(hayMovimiento);
+
+            // Actualizar indicador
+            const direccionMostrar = direccionTexto.length > 0 ? direccionTexto.join(' + ') : 'Ninguna';
+            const estadoMostrar = hayMovimiento ? '<span class="estado" style="color: #4CAF50;">Caminando</span>' : '<span class="estado" style="color: #FFC107;">Quieto</span>';
+            
+            directionIndicator.innerHTML = `Estado: ${estadoMostrar}<br>Dirección: ${direccionMostrar}<br>Posición: (${Math.round(posX)}, ${Math.round(posY)})`;
+        }
+
+        // Event listeners para teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.key in teclasPresionadas) {
+                teclasPresionadas[e.key] = true;
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key in teclasPresionadas) {
+                teclasPresionadas[e.key] = false;
+                e.preventDefault();
+            }
+        });
+
+        // Event listeners para botones en pantalla
+        const controlButtons = document.querySelectorAll('.control-btn');
+        
+        controlButtons.forEach(btn => {
+            // Mouse/Touch start
+            btn.addEventListener('mousedown', (e) => {
+                const direction = e.target.closest('.control-btn').dataset.direction;
+                activarDireccion(direction, true);
+            });
+            
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const direction = e.target.closest('.control-btn').dataset.direction;
+                activarDireccion(direction, true);
+            });
+
+            // Mouse/Touch end
+            btn.addEventListener('mouseup', (e) => {
+                const direction = e.target.closest('.control-btn').dataset.direction;
+                activarDireccion(direction, false);
+            });
+            
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const direction = e.target.closest('.control-btn').dataset.direction;
+                activarDireccion(direction, false);
+            });
+
+            btn.addEventListener('mouseleave', (e) => {
+                const direction = e.target.closest('.control-btn').dataset.direction;
+                activarDireccion(direction, false);
+            });
+        });
+
+        function activarDireccion(direction, activar) {
+            switch(direction) {
+                case 'up':
+                    teclasPresionadas.ArrowUp = activar;
+                    break;
+                case 'down':
+                    teclasPresionadas.ArrowDown = activar;
+                    break;
+                case 'left':
+                    teclasPresionadas.ArrowLeft = activar;
+                    break;
+                case 'right':
+                    teclasPresionadas.ArrowRight = activar;
+                    break;
+            }
+        }
+
+        // Loop de juego
+        function gameLoop() {
+            moverPersonaje();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Iniciar el juego
+        gameLoop();
+
+        // Función para volver al inicio
+        function volverInicio() {
+            if (confirm('¿Quieres volver al menú principal?')) {
+                window.location.href = 'index.html';
+            }
+        }
+
+        // Ajustar posición al cambiar el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            posX = Math.max(32, Math.min(window.innerWidth - 32, posX));
+            posY = Math.max(32, Math.min(window.innerHeight - 32, posY));
+        });
+    </script>
+</body>
+</html>
+```
+
+## 🎮 Cambios implementados:
+
+### ✨ **Sistema de cambio de imagen:**
+- **Quieto:** Usa `assets/personaje/personaje.png`
+- **Caminando:** Usa `assets/personaje/
+- El cambio es automático según el movimiento
+
+### 🔄 **Lógica:**
+1. Cuando **NO presionas ninguna tecla** → Muestra `personaje.png` (quieto)
+2. Cuando **presionas cualquier dirección** → Muestra (caminando)
+3. La imagen se **invierte horizontalmente** cuando va hacia la izquierda
+
+### 📊 **Indicador mejorado:**
+- Muestra el estado: **Quieto** (amarillo) o **Caminando** (verde)
+- Muestra la dirección actual
+- Muestra la posición en pantalla
+
+### ⚠️ **Nota importante:**
+Asegúrate de que la estructura de carpetas sea exactamente:
+```
